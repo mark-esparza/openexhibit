@@ -172,11 +172,12 @@ async function showFile(title) {
     let media;
     if (f.kind === "video") {
       const v = el("video", { controls: true, preload: "metadata", poster: f.poster_url, playsinline: true });
-      for (const s of f.sources || []) if (s.label !== "original" || f.sources.length === 1) v.append(el("source", { src: s.url, type: s.mime }));
-      if (f.sources && f.sources.length > 1) {
-        const orig = f.sources.find((s) => s.label === "original");
-        if (orig) v.append(el("source", { src: orig.url, type: orig.mime }));
-      }
+      // Browsers play the first source they can. MPEG 4 first for iPhone and Safari, then the sharpest
+      // WebM up to 720p, then smaller copies, then the original file.
+      const all = f.sources || [];
+      const rank = (s) => (s.label === "original" ? 3 : s.format === "mp4" ? 0 : (s.height || 0) <= 720 ? 1 : 2);
+      const ordered = [...all].sort((a, b) => rank(a) - rank(b) || (b.height || 0) - (a.height || 0));
+      for (const s of ordered) v.append(el("source", { src: s.url, type: s.mime }));
       if ((f.captions || []).some((c) => c.lang === "en")) {
         v.append(el("track", { kind: "subtitles", srclang: "en", label: "English", src: `/api/captions?title=${encodeURIComponent(f.title)}&lang=en` }));
       }
