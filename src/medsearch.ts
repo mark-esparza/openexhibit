@@ -64,12 +64,27 @@ function claimValue(item: any, prop: string): string | undefined {
   return undefined;
 }
 
+/** Strong identifiers that only medical concepts carry. */
+const STRONG = ["P494", "P4229", "P493", "P7807", "P2892", "P699", "P1402", "P1323", "P267", "P652"];
+/** Weaker medical signals: links to treatments, symptoms, specialties. */
+const WEAK = ["P2175", "P780", "P1995"];
+
 export function medicalScore(item: any, description = ""): number {
+  const has = (p: string) => Boolean(item?.claims?.[p]?.length);
   let n = 0;
-  for (const p of Object.keys(MEDICAL_PROPS)) if (item?.claims?.[p]?.length) n++;
-  if (NOISE.test(description)) n -= 3;
+  for (const p of STRONG) if (has(p)) n += 2;
+  for (const p of WEAK) if (has(p)) n += 1;
+  // MeSH also catalogs places (tree codes starting with Z), so only count it for non-geographic headings.
+  if (has("P486")) {
+    const trees: string[] = (item.claims.P672 ?? []).map((c: any) => String(c?.mainsnak?.datavalue?.value ?? ""));
+    if (trees.length === 0 || trees.some((t) => !t.startsWith("Z"))) n += 1;
+  }
+  if (NOISE.test(description)) n -= 6;
   return n;
 }
+
+/** Minimum medicalScore to treat a Wikidata item as a medical concept. */
+export const MEDICAL_THRESHOLD = 2;
 
 function toConcept(item: any): Concept {
   const medical_ids: Record<string, string> = {};
@@ -118,13 +133,18 @@ export async function interpret(deps: Deps, query: string, forcedId?: string): P
       if (!item || item.missing !== undefined) return null;
       const desc = item.descriptions?.en?.value ?? hits[pos]?.description ?? "";
       const med = medicalScore(item, desc);
-      const exact = String(hits[pos]?.match?.text ?? "").toLowerCase() === query.trim().toLowerCase();
-      const score = med * 2 + (exact ? 1 : 0) + (item.claims?.P373 ? 1 : 0) - pos * 0.3;
+      const q = query.trim().toLowerCase();
+      const label = String(item.labels?.en?.value ?? "").toLowerCase();
+      const match = hits[pos]?.match ?? {};
+      // An exact name match beats a related concept with more identifiers ("brachial plexus" is the structure, not the neuropathy).
+      const exactLabel = label === q;
+      const exactAlias = !exactLabel && match.type === "alias" && String(match.text ?? "").toLowerCase() === q;
+      const score = med + (exactLabel ? 6 : 0) + (exactAlias ? 3 : 0) + (item.claims?.P373 ? 1 : 0) - pos * 0.3;
       return { id, item, med, score };
     })
     .filter((x): x is { id: string; item: any; med: number; score: number } => x !== null);
 
-  const medical = scored.filter((x) => forcedId || x.med > 0).sort((a, b) => b.score - a.score);
+  const medical = scored.filter((x) => forcedId || x.med >= MEDICAL_THRESHOLD).sort((a, b) => b.score - a.score);
   const best = medical[0];
   const alternatives = medical
     .slice(1, 5)
@@ -205,6 +225,18 @@ export async function medicalSearch(deps: Deps, rawQuery: string, type: MediaTyp
   const settled = await Promise.allSettled(routes.map((r) => commonsSearch(deps, r.search, type, each)));
   if (routes.length === 0 || settled.every((s) => s.status === "rejected")) throw new UpstreamError("Wikimedia Commons could not be reached. Please try again.");
   const lists = settled.map((s) => (s.status === "fulfilled" ? s.value : ([] as (FileRecord | VideoRecord)[])));
+
+  // Too few hits? Also try the closest related medical concepts (BPPV video search also tries the vertigo item).
+  const firstPass = new Set(lists.flat().map((r) => r.title)).size;
+  if (concept && firstPass < 5 && alternatives.length) {
+    const extra = alternatives.slice(0, 2).filter((a) => a.label && !routes.some((r) => r.search.toLowerCase() === a.label!.toLowerCase()));
+    const more = await Promise.allSettled(extra.map((a) => commonsSearch(deps, a.label!, type, each)));
+    extra.forEach((a, i) => {
+      routes.push({ route: "related term", search: a.label!, weight: 0.8 });
+      const m = more[i];
+      lists.push(m.status === "fulfilled" ? m.value : []);
+    });
+  }
 
   const merged = new Map<string, { rec: FileRecord | VideoRecord; score: number; by: Set<string> }>();
   lists.forEach((list, i) => {

@@ -10,7 +10,7 @@ export interface Env {
   CONTACT?: string;
 }
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const DEFAULT_CONTACT = "https://github.com/mark-esparza/openexhibit";
 const TYPES: MediaType[] = ["image", "diagram", "video"];
 
@@ -75,7 +75,10 @@ export function createApi(opts: { fetch: typeof fetch; contact?: string; cache?:
     const url = new URL(request.url);
 
     const cache = opts.cache ?? null;
-    const cacheKey = new Request(url.toString(), { method: "GET" });
+    // The version is part of the key so a deploy never serves results ranked by older code.
+    const keyUrl = new URL(url.toString());
+    keyUrl.searchParams.set("_v", VERSION);
+    const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
     if (cache) {
       const hit = await cache.match(cacheKey);
       if (hit) return hit;

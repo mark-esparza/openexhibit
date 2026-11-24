@@ -9,7 +9,12 @@ const isCommons = (u: URL) => u.hostname === "commons.wikimedia.org";
 const isWikidata = (u: URL) => u.hostname === "www.wikidata.org";
 
 const ENTITIES: Record<string, any> = {
-  Q1166: { id: "Q1166", labels: { en: { value: "Michigan" } }, descriptions: { en: { value: "state of the United States of America" } }, claims: { P373: [{ mainsnak: { datavalue: { value: "Michigan" } } }] } },
+  Q1166: {
+    id: "Q1166",
+    labels: { en: { value: "Michigan" } },
+    descriptions: { en: { value: "state of the United States of America" } },
+    claims: { P486: [{ mainsnak: { datavalue: { value: "D008824" } } }], P672: [{ mainsnak: { datavalue: { value: "Z01.107.567.875.580.200" } } }], P373: [{ mainsnak: { datavalue: { value: "Michigan" } } }] },
+  },
   Q12152: {
     id: "Q12152",
     labels: { en: { value: "myocardial infarction" } },
@@ -51,10 +56,48 @@ async function get(api: (r: Request) => Promise<Response>, path: string) {
   return { status: res.status, body: (await res.json()) as any, headers: res.headers };
 }
 
-test("medicalScore counts medical identifiers and penalizes noise", () => {
-  assert.equal(medicalScore(ENTITIES.Q12152, "interruption of blood supply"), 3);
-  assert.equal(medicalScore(ENTITIES.Q1166, "state"), 0);
-  assert.equal(medicalScore(ENTITIES.Q999, "clinical trial"), -2);
+test("medicalScore weighs identifiers, ignores geographic MeSH, and penalizes noise", () => {
+  assert.equal(medicalScore(ENTITIES.Q12152, "interruption of blood supply"), 4, "ICD-10 2 + MeSH 1 + symptoms 1");
+  assert.equal(medicalScore(ENTITIES.Q1166, "state"), 0, "MeSH Z (places) does not count");
+  assert.equal(medicalScore(ENTITIES.Q999, "clinical trial"), -5);
+});
+
+test("an exact name match beats a related concept with more identifiers", async () => {
+  const anatomy = { id: "Q846961", labels: { en: { value: "brachial plexus" } }, claims: { P1402: [{ mainsnak: { datavalue: { value: "45245" } } }], P486: [{ mainsnak: { datavalue: { value: "D001917" } } }] } };
+  const neuropathy = {
+    id: "Q18556023",
+    labels: { en: { value: "brachial plexus neuropathy" } },
+    claims: Object.fromEntries(["P494", "P4229", "P2892", "P699"].map((p) => [p, [{ mainsnak: { datavalue: { value: "X" } } }]])),
+  };
+  const ents: Record<string, any> = { Q846961: anatomy, Q18556023: neuropathy };
+  const m = mockFetch([
+    (u) => (isWikidata(u) && u.searchParams.get("action") === "wbsearchentities" ? { body: { search: [{ id: "Q18556023", match: { type: "label", text: "brachial plexus neuropathy" } }, { id: "Q846961", match: { type: "label", text: "brachial plexus" } }] } } : undefined),
+    (u) => (isWikidata(u) ? { body: { entities: ents } } : undefined),
+    (u) => (isCommons(u) ? { body: { query: { pages: [1, 2, 3, 4, 5].map((i) => imagePage(`File:BP ${i}.svg`, { index: i, mime: "image/svg+xml" })) } } } : undefined),
+  ]);
+  const { body } = await get(createApi({ fetch: m.fetch }), "/api/search?q=brachial%20plexus&type=diagram");
+  assert.equal(body.concept.id, "Q846961");
+  assert.equal(body.alternatives[0].id, "Q18556023");
+});
+
+test("thin results also search the closest related concepts", async () => {
+  const vertigo = { id: "Q2", labels: { en: { value: "benign paroxysmal positional vertigo" } }, claims: { P494: [{ mainsnak: { datavalue: { value: "H81.1" } } }] } };
+  const nystagmus = { id: "Q1", labels: { en: { value: "positional nystagmus" } }, claims: { P494: [{ mainsnak: { datavalue: { value: "H55" } } }], P2892: [{ mainsnak: { datavalue: { value: "C1" } } }] } };
+  const m = mockFetch([
+    (u) => (isWikidata(u) && u.searchParams.get("action") === "wbsearchentities" ? { body: { search: [{ id: "Q1", match: { type: "alias", text: "BPPV" } }, { id: "Q2", match: { type: "alias", text: "BPPV" } }] } } : undefined),
+    (u) => (isWikidata(u) ? { body: { entities: { Q1: nystagmus, Q2: vertigo } } } : undefined),
+    (u) => {
+      if (!isCommons(u)) return undefined;
+      const s = u.searchParams.get("gsrsearch") ?? "";
+      if (s.startsWith("benign paroxysmal positional vertigo")) return { body: { query: { pages: [videoPage("File:Dix Hallpike.webm", { index: 1 }), videoPage("File:Epley.webm", { index: 2 })] } } };
+      if (s.startsWith("positional nystagmus")) return { body: { query: { pages: [videoPage("File:Nystagmus.webm", { index: 1 })] } } };
+      return { body: { query: { pages: [] } } };
+    },
+  ]);
+  const { body } = await get(createApi({ fetch: m.fetch }), "/api/search?q=BPPV&type=video");
+  assert.equal(body.concept.id, "Q1");
+  assert.deepEqual(body.searched.map((s: any) => s.route), ["your words", "medical name", "related term"]);
+  assert.deepEqual(body.results.map((r: any) => r.title).sort(), ["File:Dix Hallpike.webm", "File:Epley.webm", "File:Nystagmus.webm"]);
 });
 
 test("'MI' is read as myocardial infarction, not Michigan, and searched three ways", async () => {
@@ -77,7 +120,7 @@ test("'MI' is read as myocardial infarction, not Michigan, and searched three wa
 test("queries with no medical meaning fall back to a plain search", async () => {
   const m = routes(["Q1166"]);
   const { body } = await get(createApi({ fetch: m.fetch }), "/api/search?q=Michigan");
-  assert.equal(body.concept, null);
+  assert.equal(body.concept, null, "a place with a geographic MeSH code is not a medical concept");
   assert.deepEqual(body.searched.map((s: any) => s.route), ["your words"]);
   assert.equal(body.results[0].title, "File:Michigan flag.jpg");
 });
