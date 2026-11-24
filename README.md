@@ -50,6 +50,20 @@ npm run deploy    # Cloudflare Workers (free plan is enough)
 
 Set `CONTACT` in `wrangler.jsonc` to a URL or email you check; it is sent in the User-Agent header as [Wikimedia's policy](https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy) asks.
 
+## Taking the site offline
+
+Set `"MAINTENANCE": "true"` in `wrangler.jsonc` and push. Every page and API call then returns a short "temporarily unavailable" page (HTTP 503, not indexed by search engines) and no requests reach Wikimedia. Set it back to `"false"` and push to bring the site back. Because the switch lives in the code, a later deploy cannot turn the site back on by accident.
+
+## Safeguards
+
+- **Rate limit:** 30 API calls per minute per visitor (Cloudflare rate limiting binding); extra calls get HTTP 429.
+- **Same-origin API:** no CORS headers, so other websites cannot use the API from their pages. Only GET is accepted, and URLs over 2048 characters are refused.
+- **Input checks:** queries capped at 200 characters, results at 40, concept IDs and caption languages validated, and media fetched only from Wikimedia hosts.
+- **Security headers:** strict Content Security Policy, no framing, HSTS, and camera, microphone and location access disabled.
+- **Crawlers:** `robots.txt` keeps search engines off `/api/`, and API responses carry `noindex`.
+- **Caching:** results cached at the edge for an hour, keeping load on Wikimedia low.
+- **Cost:** on the Cloudflare Workers free plan, traffic over the daily request allowance is refused rather than billed.
+
 ## Related
 
 - [wikimedia-commons-mcp](https://github.com/mark-esparza/wikimedia-commons-mcp): the same Commons tools as a connector for Claude. The files in `src/core/` come from that project under the MIT License.

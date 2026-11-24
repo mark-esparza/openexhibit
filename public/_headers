@@ -2,3 +2,5 @@
   Content-Security-Policy: default-src 'self'; img-src 'self' https://upload.wikimedia.org https://thumb.wikimedia.org data:; media-src 'self' https://upload.wikimedia.org; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
