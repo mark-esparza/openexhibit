@@ -15,6 +15,6 @@
     // Sent in the User-Agent header, as Wikimedia's policy asks.
     "CONTACT": "https://github.com/mark-esparza/openexhibit",
     // "true" takes the site offline with a "temporarily unavailable" page. Set to "false" to bring it back.
-    "MAINTENANCE": "true"
+    "MAINTENANCE": "false"
   }
 }
