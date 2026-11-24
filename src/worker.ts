@@ -10,7 +10,7 @@ export interface Env {
   CONTACT?: string;
 }
 
-const VERSION = "0.1.2";
+const VERSION = "0.1.3";
 const DEFAULT_CONTACT = "https://github.com/mark-esparza/openexhibit";
 const TYPES: MediaType[] = ["image", "diagram", "video"];
 
