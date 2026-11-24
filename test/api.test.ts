@@ -210,3 +210,16 @@ test("/api/captions proxies VTT from Commons and validates input", async () => {
   assert.equal((await api(new Request(BASE + "/api/captions?title=X.webm&lang=e%26n"))).status, 400);
   assert.equal((await api(new Request(BASE + "/api/captions?title=https://evil.example/x"))).status, 400);
 });
+
+test("related terms must share a word with the concept", async () => {
+  const murmur = { id: "Q1", labels: { en: { value: "heart murmur" } }, claims: { P494: [{ mainsnak: { datavalue: { value: "R01" } } }] } };
+  const levine = { id: "Q2", labels: { en: { value: "Levine scale" } }, claims: { P2892: [{ mainsnak: { datavalue: { value: "C2" } } }] } };
+  const m = mockFetch([
+    (u) => (isWikidata(u) && u.searchParams.get("action") === "wbsearchentities" ? { body: { search: [{ id: "Q1", match: { type: "label", text: "heart murmur" } }, { id: "Q2", match: { type: "alias", text: "x" } }] } } : undefined),
+    (u) => (isWikidata(u) ? { body: { entities: { Q1: murmur, Q2: levine } } } : undefined),
+    (u) => (isCommons(u) ? { body: { query: { pages: (u.searchParams.get("gsrsearch") ?? "").startsWith("Levine") ? [videoPage("File:Black holes.webm", { index: 1 })] : [] } } } : undefined),
+  ]);
+  const { body } = await get(createApi({ fetch: m.fetch }), "/api/search?q=heart%20murmur&type=video");
+  assert.equal(body.results.length, 0);
+  assert.ok(!body.searched.some((s: any) => s.route === "related term"));
+});

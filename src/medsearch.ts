@@ -229,7 +229,13 @@ export async function medicalSearch(deps: Deps, rawQuery: string, type: MediaTyp
   // Too few hits? Also try the closest related medical concepts (BPPV video search also tries the vertigo item).
   const firstPass = new Set(lists.flat().map((r) => r.title)).size;
   if (concept && firstPass < 5 && alternatives.length) {
-    const extra = alternatives.slice(0, 2).filter((a) => a.label && !routes.some((r) => r.search.toLowerCase() === a.label!.toLowerCase()));
+    // Only related names that share a real word with the concept, so "heart murmur" never wanders to "Levine scale".
+    const words = (t: string) => new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
+    const base = words(`${concept.label} ${query}`);
+    const extra = alternatives
+      .filter((a) => a.label && !routes.some((r) => r.search.toLowerCase() === a.label!.toLowerCase()))
+      .filter((a) => [...words(a.label!)].some((w) => base.has(w)))
+      .slice(0, 2);
     const more = await Promise.allSettled(extra.map((a) => commonsSearch(deps, a.label!, type, each)));
     extra.forEach((a, i) => {
       routes.push({ route: "related term", search: a.label!, weight: 0.8 });

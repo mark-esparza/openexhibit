@@ -1,6 +1,6 @@
 {
   "name": "openexhibit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Medical education search for freely licensed images, diagrams and videos from Wikimedia Commons.",
   "private": true,
   "type": "module",
