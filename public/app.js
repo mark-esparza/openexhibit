@@ -2,7 +2,6 @@
 "use strict";
 
 const view = document.getElementById("view");
-const home = document.getElementById("home");
 const form = document.getElementById("search");
 const qInput = document.getElementById("q");
 const typeSelect = document.getElementById("type");
@@ -141,10 +140,14 @@ function resultsTable(data) {
   return el("div", { class: "tablebox" }, el("table", { class: "results" }, rows));
 }
 
+function setHome(isHome) {
+  document.body.classList.toggle("home", isHome);
+}
+
 async function runSearch(q, type, concept) {
-  home.hidden = true;
+  setHome(false);
   status(`Searching ${TYPE_LABEL[type].toLowerCase()} for "${q}"...`);
-  document.title = `${q}: ${TYPE_LABEL[type]}, OpenExhibit`;
+  document.title = `${q}, OpenExhibit`;
   try {
     const params = new URLSearchParams({ q, type });
     if (concept) params.set("concept", concept);
@@ -164,7 +167,7 @@ async function runSearch(q, type, concept) {
 // ---------- File detail ----------
 
 async function showFile(title) {
-  home.hidden = true;
+  setHome(false);
   status("Loading file...");
   try {
     const f = await api(`/api/file?title=${encodeURIComponent(title)}`);
@@ -231,9 +234,9 @@ function render() {
   if (p.get("file")) return showFile(p.get("file"));
   if (q || p.get("concept")) return runSearch(q, type, p.get("concept"));
   setView();
-  home.hidden = false;
-  document.title = "OpenExhibit: Open Medical Images, Diagrams and Videos";
-  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  setHome(true);
+  document.title = "OpenExhibit";
+  qInput.focus();
 }
 
 function go(url) {
@@ -251,19 +254,6 @@ form.addEventListener("submit", (e) => {
 typeSelect.addEventListener("change", () => {
   if (qInput.value.trim()) go(stateUrl({ q: qInput.value.trim(), type: typeSelect.value }));
 });
-
-// Keep the current query when switching media type from the side links.
-document.querySelectorAll("[data-type]").forEach((a) =>
-  a.addEventListener("click", (e) => {
-    e.preventDefault();
-    const q = qInput.value.trim();
-    if (q) go(stateUrl({ q, type: a.dataset.type }));
-    else {
-      typeSelect.value = a.dataset.type;
-      qInput.focus();
-    }
-  }),
-);
 
 // Same page links stay in the app without a reload.
 document.addEventListener("click", (e) => {
