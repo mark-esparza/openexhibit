@@ -1,0 +1,19 @@
+{
+  "name": "openexhibit",
+  "version": "0.1.0",
+  "description": "Medical education search for freely licensed images, diagrams and videos from Wikimedia Commons.",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "wrangler": "^4.0.0"
+  },
+  "engines": { "node": ">=22.18" }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "openexhibit",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-09-01",
+  "observability": { "enabled": true },
+  // Files in ./public are served directly; anything else (the /api routes) goes to the Worker.
+  "assets": { "directory": "./public" },
+  "vars": {
+    // Sent in the User-Agent header, as Wikimedia's policy asks.
+    "CONTACT": "https://github.com/mark-esparza/openexhibit"
+  }
+}

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenExhibit: Open Medical Images, Diagrams and Videos</title>
+<meta name="description" content="Search freely licensed medical images, diagrams and videos for teaching and study, with a ready credit line for every file.">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<div class="page" id="top">
+  <div class="banner"><b><a href="/">OpenExhibit</a></b><span>Open medical images, diagrams and videos for teaching and study</span></div>
+  <div class="strip">
+    <a href="/">Home</a> | <a href="/#tips">Search Tips</a> | <a href="/#about">About</a> |
+    <a href="/#licensing">Licensing</a> |
+    <a href="https://github.com/mark-esparza/openexhibit" target="_blank" rel="noopener">Source Code</a>
+  </div>
+
+  <div class="grid">
+    <nav class="side" aria-label="Site links">
+      <h3>Search</h3>
+      <div>
+        <a href="/?type=image" data-type="image">Images</a><br>
+        <a href="/?type=diagram" data-type="diagram">Diagrams</a><br>
+        <a href="/?type=video" data-type="video">Videos</a>
+      </div>
+      <h3>Examples</h3>
+      <div>
+        <a href="/?q=KF+ring">KF ring</a><br>
+        <a href="/?q=MI&amp;type=diagram">MI</a><br>
+        <a href="/?q=BPPV&amp;type=video">BPPV</a><br>
+        <a href="/?q=brachial+plexus&amp;type=diagram">Brachial plexus</a><br>
+        <a href="/?q=metoprolol">Metoprolol</a>
+      </div>
+      <h3>Resources</h3>
+      <div>
+        <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a><br>
+        <a href="https://github.com/mark-esparza/wikimedia-commons-mcp" target="_blank" rel="noopener">Claude connector</a><br>
+        <a href="https://github.com/mark-esparza/openexhibit" target="_blank" rel="noopener">Source code</a>
+      </div>
+    </nav>
+
+    <main>
+      <form class="search" id="search" role="search" action="/" method="get">
+        <label for="q">Search for:</label>
+        <div class="row">
+          <input type="text" id="q" name="q" autocomplete="off" spellcheck="false" placeholder="a finding, disease, structure or drug">
+          <select id="type" name="type" aria-label="Media type">
+            <option value="image">Images</option>
+            <option value="diagram">Diagrams</option>
+            <option value="video">Videos</option>
+          </select>
+          <button type="submit">Search</button>
+        </div>
+      </form>
+
+      <div id="view" aria-live="polite"></div>
+
+      <div id="home">
+        <h1>Welcome to OpenExhibit</h1>
+        <p>OpenExhibit finds freely licensed medical images, diagrams and videos on Wikimedia Commons and gives you a ready credit line for each one. It understands medical shorthand, so a search for <a href="/?q=KF+ring">KF ring</a> finds Kayser Fleischer rings and <a href="/?q=MI">MI</a> means myocardial infarction.</p>
+        <hr>
+        <h2>What's New</h2>
+        <ul>
+          <li><b>November 2026:</b> First public version, with medical search for images, diagrams and videos. <span class="new">NEW!</span></li>
+        </ul>
+        <hr>
+        <h2 id="tips">Search Tips</h2>
+        <div class="tablebox"><table>
+          <tr><th scope="col">Try</th><th scope="col">What happens</th></tr>
+          <tr><td class="k">Abbreviations</td><td>MI, DKA, BPPV and KF ring are matched to the full medical term before searching.</td></tr>
+          <tr><td class="k">Diagrams</td><td>Choose Diagrams for labeled drawings such as the brachial plexus or the cardiac cycle.</td></tr>
+          <tr><td class="k">Drugs</td><td>A drug name shows its chemical structure first when one is on record.</td></tr>
+          <tr><td class="k">Videos</td><td>Choose Videos for exam signs and maneuvers. Many clips come from open access journal articles.</td></tr>
+          <tr><td class="k">Wrong meaning?</td><td>Use the suggestions under Search Details to pick the concept you meant.</td></tr>
+        </table></div>
+        <hr>
+        <h2 id="about">About</h2>
+        <p>Every search runs three ways at once: the words you typed, the standard medical name, and the matching Commons category. The meaning of your words comes from Wikidata, ranked by medical identifiers such as MeSH, ICD and anatomy codes. Files found by more than one route rank higher.</p>
+        <p>OpenExhibit is for education. It is not a diagnostic tool, and images are not reviewed for accuracy. Check each file's description and source before teaching from it.</p>
+        <hr>
+        <h2 id="licensing">Licensing</h2>
+        <p>Media belongs to its authors on Wikimedia Commons and keeps its own license, shown with every result. Most licenses require credit. Files marked BY SA also require that anything you build from them uses the same license.</p>
+        <p>The OpenExhibit source code is free software under the GNU Affero General Public License, version 3 or later.</p>
+      </div>
+    </main>
+  </div>
+
+  <hr>
+  <footer>
+    [ <a href="/">Home</a> | <a href="/#tips">Search Tips</a> | <a href="/#about">About</a> | <a href="https://github.com/mark-esparza/openexhibit" target="_blank" rel="noopener">Source Code</a> ]<br>
+    Questions or comments? <a href="https://github.com/mark-esparza/openexhibit/issues" target="_blank" rel="noopener">Open an issue on GitHub</a>.<br>
+    Media from Wikimedia Commons contributors under their own licenses. Wikimedia Commons is a trademark of the Wikimedia Foundation. OpenExhibit is not affiliated with or endorsed by the Wikimedia Foundation.<br>
+    Last revised: November 24, 2026<br>
+    <span class="viewed">This page is best viewed with Netscape Navigator 4.0 or Internet Explorer 4.0 at 800 x 600.</span>
+  </footer>
+</div>
+<script src="/app.js" defer></script>
+</body>
+</html>
